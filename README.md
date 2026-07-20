@@ -85,6 +85,8 @@ Serviço gerenciado pela Oracle, gratuito, para acesso SSH temporário a subnets
 - **Autenticação**: variáveis explícitas (`tenancy_ocid`, `user_ocid`, `fingerprint`, `private_key_path`/`private_key`, `region`) em vez de `~/.oci/config` — mantido assim mesmo fora do escopo do GitHub Actions atual, por já deixar o provider desacoplado de config local.
 - **Data sources úteis**: `oci_identity_availability_domains`, `oci_core_images`, `oci_core_services`.
 - **State**: local (`terraform.tfstate`), git-ignored. Fora do escopo atual: remote state (Object Storage S3-compatible) e GitHub Actions — ficam documentados como possível extensão futura, não pendência do projeto.
+- **`required_version`**: fixado em `terraform { required_version = ">= 1.12.0" }` — trava a versão mínima do próprio OpenTofu (separado da versão do provider), evitando incompatibilidades ao rodar em outra máquina.
+- **`outputs.tf`**: expõe `bastion_id`, `instance_private_ips` e `instance_names`, eliminando a necessidade de `tofu state show` manual para conectar via Bastion (usado por `scripts/03.conectar-instancia.ps1`).
 
 ### Nota sobre `source_details` no `oci_core_instance`
 
@@ -113,6 +115,7 @@ oci iam region list
 ```
 main.tf              # provider, rede, bastion, compute
 variables.tf          # variáveis de autenticação e configuração
+outputs.tf             # bastion_id, IPs privados e nomes das instâncias
 terraform.tfvars      # valores reais (local, git-ignored)
 cloud-init.yaml       # hardening da instância no primeiro boot
 scripts/
@@ -123,17 +126,11 @@ scripts/
 
 ## Como conectar em uma instância
 
-Sessões do Bastion são efêmeras (TTL até 3h), então não há necessidade de guardar sessão — o script cria uma nova a cada execução.
+Sessões do Bastion são efêmeras (TTL até 3h), então não há necessidade de guardar sessão — o script cria uma nova a cada execução. O `bastion_id` e os IPs privados vêm de `outputs.tf`, sem precisar consultar o state manualmente.
 
 ```powershell
-./scripts/03.conectar-instancia.ps1
-```
-
-Preencha `$bastionId` e `$targetIp` no script com os valores obtidos via:
-
-```bash
-tofu state show oci_bastion_bastion.main
-tofu state show 'oci_core_instance.main[0]'   # ou [1]
+./scripts/03.conectar-instancia.ps1               # conecta na instância [0]
+./scripts/03.conectar-instancia.ps1 -InstanceIndex 1
 ```
 
 ## Estado atual — escopo concluído

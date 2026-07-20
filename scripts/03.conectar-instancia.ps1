@@ -2,10 +2,14 @@
 # Sessões do Bastion são efêmeras (TTL máx. 3h) — este script cria uma nova
 # sessão a cada execução, então não precisa reaproveitar sessão antiga.
 
-$bastionId   = "<bastion-ocid>"        # tofu state show oci_bastion_bastion.main
-$targetIp    = "<instance-private-ip>" # tofu state show 'oci_core_instance.main[0]' (ou [1])
-$sshKeyPath  = "$HOME/.ssh/opentofu-lab"
-$localPort   = 2222
+param(
+  [int]$InstanceIndex = 0 # índice da instância (0 ou 1) em oci_core_instance.main
+)
+
+$bastionId  = tofu output -raw bastion_id
+$targetIp   = (tofu output -json instance_private_ips | ConvertFrom-Json)[$InstanceIndex]
+$sshKeyPath = "$HOME/.ssh/opentofu-lab"
+$localPort  = 2222
 
 # 1. Cria a sessão de port forwarding no Bastion
 $session = oci bastion session create-port-forwarding `
