@@ -14,5 +14,6 @@ write_files:
 
 runcmd:
   - systemctl restart sshd
+  - firewall-offline-cmd --zone=public --add-service=ssh
   - firewall-offline-cmd --zone=public --remove-service=dhcpv6-client || true
   - systemctl enable --now firewalld
